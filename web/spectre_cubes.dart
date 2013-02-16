@@ -1,5 +1,5 @@
 import 'dart:html';
-import 'dart:math';
+import 'dart:math' as Math;
 import 'package:vector_math/vector_math.dart';
 import 'package:game_loop/game_loop.dart';
 import 'package:asset_pack/asset_pack.dart';
@@ -42,11 +42,12 @@ class Cube {
   DepthState _unitCubeDepthState;
   Texture2D _unitCubeTexture;
   GraphicsDevice graphicsDevice;
+  vec3 scale;
   vec3 translation;
   mat4 modelMatrix;
-  int height;
-  int width;
-  num depth; // shoudl be double
+  double height;
+  double width;
+  double depth; // shoudl be double
 
   /// View matrix for the application.
   //mat4 _viewMatrix;
@@ -60,8 +61,10 @@ class Cube {
   Float32Array _modelViewProjectionMatrixArray = new Float32Array(16);
   Float32Array _modelMatrixArray = new Float32Array(16);
 
-  Cube(this.graphicsDevice, this.translation, this.width, this.height, this.depth, List<int> color) {
-    //translation.setComponents(translation.x * 0.1, translation.y * 0.1, translation.z);
+  Cube(this.graphicsDevice, this.translation, num cubeWidth, num cubeHeight, num cubeDepth, List<int> color) {
+    width = cubeWidth.toDouble();
+    height = cubeHeight.toDouble();
+    depth = cubeDepth.toDouble();
     //_viewMatrix = new mat4.identity();
     //_projectionMatrix = new mat4.identity();
 
@@ -87,37 +90,25 @@ class Cube {
   }
 
   drawCube() {
+    _viewProjectionMatrix = new mat4.identity();
+    _modelViewProjectionMatrix = new mat4.identity();
+    modelMatrix = new mat4.identity();
+    modelMatrix.scale(width, height, depth);
+    modelMatrix.setTranslation(translation);
+    modelMatrix.copyIntoArray(_modelMatrixArray);
+
+    _viewProjectionMatrix.copyFrom(camera.projectionMatrix);
+    _viewProjectionMatrix.multiply(camera.lookAtMatrix);
+    _viewProjectionMatrix.copyIntoArray(_cameraTransform, 0);
+
     var context = graphicsDevice.context;
     context.setPrimitiveTopology(GraphicsContext.PrimitiveTopologyTriangles);
     context.setShaderProgram(_unitCubeShaderProgram);
     context.setTextures(0, [_unitCubeTexture]);
     context.setSamplers(0, [_skyboxSampler]);
 
-
-//    mat4 P = camera.projectionMatrix;
-//    mat4 LA = camera.lookAtMatrix;
-//
-//    P.multiply(LA);
-//
-//    P.copyIntoArray(_cameraTransform, 0);
-
-    _viewProjectionMatrix = new mat4.identity();
-    _modelViewProjectionMatrix = new mat4.identity();
-    modelMatrix = new mat4.identity();
-    //modelMatrix.setTranslation(translation);
-    //modelMatrix.scale(width * 1.0, height * 1.0);
-
-    _viewProjectionMatrix.copyFrom(camera.lookAtMatrix);
-    _viewProjectionMatrix.multiply(camera.projectionMatrix);
-    _viewProjectionMatrix.copyIntoArray(_cameraTransform, 0);
-//    _modelViewProjectionMatrix.copyFrom(_viewProjectionMatrix);
-//    _modelViewProjectionMatrix.multiply(modelMatrix);
-//    _modelViewProjectionMatrix.copyIntoArray(_modelViewProjectionMatrixArray);
-    modelMatrix.copyIntoArray(_modelMatrixArray);
     context.setConstant('objectTransform', _modelMatrixArray);
     context.setConstant('cameraTransform', _cameraTransform);
-
-
     context.setBlendState(_skyboxBlendState);
     context.setRasterizerState(_unitCubeRasterizerState);
     context.setDepthState(_unitCubeDepthState);
@@ -129,27 +120,142 @@ class Cube {
 }
 
 _setupCubes() {
-  cubes.add(new Cube(_graphicsDevice, new vec3(0.0,  -2.0,  -1.0), 21,  14,   3, [0x22, 0x22, 0x22, 0xff]));
-  cubes.add(new Cube(_graphicsDevice, new vec3(1.0,  -1.0,  -1.0), 19,  16,   3, [0x22, 0x22, 0x22, 0xff]));
-  cubes.add(new Cube(_graphicsDevice, new vec3(2.0,   0.0,  -1.0), 17,  18,   3, [0x22, 0x22, 0x22, 0xff]));
+  helper(o, x, y, z, w, h, d, num c){
+    int r = ( (c&0xFF0000)>>16 );
+    int g = ( (c&0x00FF00)>>8 );
+    int b = (c&0x0000FF);
+    cubes.add(new Cube(_graphicsDevice, new vec3(x,  y,  z), w,  h,   d, [r, g, b, 0xff]));
+  };
+  //POPTART
+  var poptart; //new Object3D();
+  //    object     x    y    z    w    h    d   color
+  helper( poptart,   0,  -2,  -1,  21,  14,   3, 0x222222);
+  helper( poptart,   1,  -1,  -1,  19,  16,   3, 0x222222);
+  helper( poptart,   2,   0,  -1,  17,  18,   3, 0x222222);
 
-  cubes.add(new Cube(_graphicsDevice, new vec3(1,  -2,-1.5),  19,  14,   4, [0xff, 0xcc, 0x99, 0xff]));
-  cubes.add(new Cube(_graphicsDevice, new vec3(2,  -1,-1.5),  17,  16,   4, [0xff, 0xcc, 0x99, 0xff]));
+  helper( poptart,   1,  -2,-1.5,  19,  14,   4, 0xffcc99);
+  helper( poptart,   2,  -1,-1.5,  17,  16,   4, 0xffcc99);
 
-  cubes.add(new Cube(_graphicsDevice, new vec3(2,  -4,   2),  17,  10,  .6, [0xff, 0x99, 0xff, 0xff]));
-  cubes.add(new Cube(_graphicsDevice, new vec3(3,  -3,   2),  15,  12,  .6, [0xff, 0x99, 0xff, 0xff]));
-  cubes.add(new Cube(_graphicsDevice, new vec3(4,  -2,   2),  13,  14,  .6, [0xff, 0x99, 0xff, 0xff]));
+  helper( poptart,   2,  -4,   2,  17,  10,  .6, 0xff99ff);
+  helper( poptart,   3,  -3,   2,  15,  12,  .6, 0xff99ff);
+  helper( poptart,   4,  -2,   2,  13,  14,  .6, 0xff99ff);
 
-  cubes.add(new Cube(_graphicsDevice, new vec3(4,  -4,   2),   1,   1,  .7, [0xff, 0x33, 0x99, 0xff]));
-  cubes.add(new Cube(_graphicsDevice, new vec3(9,  -3,   2),   1,   1,  .7, [0xff, 0x33, 0x99, 0xff]));
-  cubes.add(new Cube(_graphicsDevice, new vec3(12,  -3,   2),   1,   1,  .7, [0xff, 0x33, 0x99, 0xff]));
-  cubes.add(new Cube(_graphicsDevice, new vec3(16,  -5,   2),   1,   1,  .7, [0xff, 0x33, 0x99, 0xff]));
-  cubes.add(new Cube(_graphicsDevice, new vec3(8,  -7,   2),   1,   1,  .7, [0xff, 0x33, 0x99, 0xff]));
-  cubes.add(new Cube(_graphicsDevice, new vec3(5,  -9,   2),   1,   1,  .7, [0xff, 0x33, 0x99, 0xff]));
-  cubes.add(new Cube(_graphicsDevice, new vec3(9, -10,   2),   1,   1,  .7, [0xff, 0x33, 0x99, 0xff]));
-  cubes.add(new Cube(_graphicsDevice, new vec3(3, -11,   2),   1,   1,  .7, [0xff, 0x33, 0x99, 0xff]));
-  cubes.add(new Cube(_graphicsDevice, new vec3(7, -13,   2),   1,   1,  .7, [0xff, 0x33, 0x99, 0xff]));
-  cubes.add(new Cube(_graphicsDevice, new vec3(4, -14,   2),   1,   1,  .7, [0xff, 0x33, 0x99, 0xff]));
+  helper( poptart,   4,  -4,   2,   1,   1,  .7, 0xff3399);
+  helper( poptart,   9,  -3,   2,   1,   1,  .7, 0xff3399);
+  helper( poptart,  12,  -3,   2,   1,   1,  .7, 0xff3399);
+  helper( poptart,  16,  -5,   2,   1,   1,  .7, 0xff3399);
+  helper( poptart,   8,  -7,   2,   1,   1,  .7, 0xff3399);
+  helper( poptart,   5,  -9,   2,   1,   1,  .7, 0xff3399);
+  helper( poptart,   9, -10,   2,   1,   1,  .7, 0xff3399);
+  helper( poptart,   3, -11,   2,   1,   1,  .7, 0xff3399);
+  helper( poptart,   7, -13,   2,   1,   1,  .7, 0xff3399);
+  helper( poptart,   4, -14,   2,   1,   1,  .7, 0xff3399);
+
+//  poptart.position.x=-10.5;
+//  poptart.position.y=9;
+//  scene.add( poptart );
+
+  //FEET
+  var feet; // = new Object3D();
+  helper( feet,   0,  -2, .49,  3,  3,   1, 0x222222);
+  helper( feet,   1,  -1, .49,  3,  3,   1, 0x222222);
+  helper( feet,   1,  -2,-.01,  2,  2,   2, 0x999999);
+  helper( feet,   2,  -1,-.01,  2,  2,   2, 0x999999);
+
+  helper( feet,   6,  -2, -.5,  3,  3,   1, 0x222222);
+  helper( feet,   6,  -2, -.5,  4,  2,   1, 0x222222);
+  helper( feet,   7,  -2,-.99,  2,  2,   2, 0x999999);
+
+  helper( feet,   16, -3, .49,  3,  2,   1, 0x222222);
+  helper( feet,   15, -2, .49,  3,  2,   1, 0x222222);
+  helper( feet,   15, -2,-.01,  2,  1,   2, 0x999999);
+  helper( feet,   16, -3,-.01,  2,  1,   2, 0x999999);
+
+  helper( feet,   21, -3, -.5,  3,  2,   1, 0x222222);
+  helper( feet,   20, -2, -.5,  3,  2,   1, 0x222222);
+  helper( feet,   20, -2,-.99,  2,  1,   2, 0x999999);
+  helper( feet,   21, -3,-.99,  2,  1,   2, 0x999999);
+
+//  feet.position.x=-12.5;
+//  feet.position.y=-6;
+//  scene.add( feet );
+
+  //TAIL
+  var tail; //=new Object3D();
+  helper( tail,   0,  0,-.25,  4,  3, 1.5, 0x222222);
+  helper( tail,   1, -1,-.25,  4,  3, 1.5, 0x222222);
+  helper( tail,   2, -2,-.25,  4,  3, 1.5, 0x222222);
+  helper( tail,   3, -3,-.25,  4,  3, 1.5, 0x222222);
+  helper( tail,   1, -1, -.5,  2,  1,   2, 0x999999);
+  helper( tail,   2, -2, -.5,  2,  1,   2, 0x999999);
+  helper( tail,   3, -3, -.5,  2,  1,   2, 0x999999);
+  helper( tail,   4, -4, -.5,  2,  1,   2, 0x999999);
+
+//  tail.position.x=-16.5;
+//  tail.position.y=2;
+//  scene.add( tail );
+
+  //FACE
+  var face; //=new Object3D();
+  helper(    face,   2,  -3,  -3,  12,   9,   4, 0x222222);
+  helper(    face,   0,  -5,   0,  16,   5,   1, 0x222222);
+  helper(    face,   1,  -1,   0,   4,  10,   1, 0x222222);
+  helper(    face,  11,  -1,   0,   4,  10,   1, 0x222222);
+  helper(    face,   3, -11,   0,  10,   2,   1, 0x222222);
+  helper(    face,   2,   0,   0,   2,   2,   1, 0x222222);
+  helper(    face,   4,  -2,   0,   2,   2,   1, 0x222222);
+  helper(    face,  12,   0,   0,   2,   2,   1, 0x222222);
+  helper(    face,  10,  -2,   0,   2,   2,   1, 0x222222);
+
+  helper(    face,   1, -5,   .5,  14,   5,   1, 0x999999);
+  helper(    face,   3, -4,   .5,  10,   8,   1, 0x999999);
+  helper(    face,   2, -1,   .5,   2,  10,   1, 0x999999);
+  helper(    face,  12, -1,   .5,   2,  10,   1, 0x999999);
+  helper(    face,   4, -2,   .5,   1,   2,   1, 0x999999);
+  helper(    face,   5, -3,   .5,   1,   1,   1, 0x999999);
+  helper(    face,  11, -2,   .5,   1,   2,   1, 0x999999);
+  helper(    face,  10, -3,   .5,   1,   1,   1, 0x999999);
+  //Eyes
+  helper(    face,   4,  -6,  .6,   2,   2,   1, 0x222222);
+  helper(    face,  11,  -6,  .6,   2,   2,   1, 0x222222);
+  helper(    face,3.99,-5.99, .6,1.01,1.01,1.01, 0xffffff);
+  helper(   face,10.99,-5.99, .6,1.01,1.01,1.01, 0xffffff);
+  //MOUTH
+  helper(    face,   5, -10,  .6,   7,   1,   1, 0x222222);
+  helper(    face,   5,  -9,  .6,   1,   2,   1, 0x222222);
+  helper(    face,   8,  -9,  .6,   1,   2,   1, 0x222222);
+  helper(    face,  11,  -9,  .6,   1,   2,   1, 0x222222);
+  //CHEEKS
+  helper(    face,   2,  -8,  .6,   2,   2, .91, 0xff9999);
+  helper(    face,  13,  -8,  .6,   2,   2, .91, 0xff9999);
+
+//  face.position.x=-.5;
+//  face.position.y=4;
+//  face.position.z=4;
+//  scene.add(face);
+//
+//
+//  cubes.add(new Cube(_graphicsDevice, new vec3(0.0,  -2.0,  -1.0), 21,  14,   3, [0x22, 0x22, 0x22, 0xff]));
+//  cubes.add(new Cube(_graphicsDevice, new vec3(1.0,  -1.0,  -1.0), 19,  16,   3, [0x22, 0x22, 0x22, 0xff]));
+//  cubes.add(new Cube(_graphicsDevice, new vec3(2.0,   0.0,  -1.0), 17,  18,   3, [0x22, 0x22, 0x22, 0xff]));
+//
+//  cubes.add(new Cube(_graphicsDevice, new vec3(1,  -2,-1.5),  19,  14,   4, [0xff, 0xcc, 0x99, 0xff]));
+//  cubes.add(new Cube(_graphicsDevice, new vec3(2,  -1,-1.5),  17,  16,   4, [0xff, 0xcc, 0x99, 0xff]));
+//
+//  cubes.add(new Cube(_graphicsDevice, new vec3(2,  -4,   2),  17,  10,  .6, [0xff, 0x99, 0xff, 0xff]));
+//  cubes.add(new Cube(_graphicsDevice, new vec3(3,  -3,   2),  15,  12,  .6, [0xff, 0x99, 0xff, 0xff]));
+//  cubes.add(new Cube(_graphicsDevice, new vec3(4,  -2,   2),  13,  14,  .6, [0xff, 0x99, 0xff, 0xff]));
+//
+//  cubes.add(new Cube(_graphicsDevice, new vec3(4,  -4,   2),   1,   1,  .7, [0xff, 0x33, 0x99, 0xff]));
+//  cubes.add(new Cube(_graphicsDevice, new vec3(9,  -3,   2),   1,   1,  .7, [0xff, 0x33, 0x99, 0xff]));
+//  cubes.add(new Cube(_graphicsDevice, new vec3(12,  -3,   2),   1,   1,  .7, [0xff, 0x33, 0x99, 0xff]));
+//  cubes.add(new Cube(_graphicsDevice, new vec3(16,  -5,   2),   1,   1,  .7, [0xff, 0x33, 0x99, 0xff]));
+//  cubes.add(new Cube(_graphicsDevice, new vec3(8,  -7,   2),   1,   1,  .7, [0xff, 0x33, 0x99, 0xff]));
+//  cubes.add(new Cube(_graphicsDevice, new vec3(5,  -9,   2),   1,   1,  .7, [0xff, 0x33, 0x99, 0xff]));
+//  cubes.add(new Cube(_graphicsDevice, new vec3(9, -10,   2),   1,   1,  .7, [0xff, 0x33, 0x99, 0xff]));
+//  cubes.add(new Cube(_graphicsDevice, new vec3(3, -11,   2),   1,   1,  .7, [0xff, 0x33, 0x99, 0xff]));
+//  cubes.add(new Cube(_graphicsDevice, new vec3(7, -13,   2),   1,   1,  .7, [0xff, 0x33, 0x99, 0xff]));
+//  cubes.add(new Cube(_graphicsDevice, new vec3(4, -14,   2),   1,   1,  .7, [0xff, 0x33, 0x99, 0xff]));
 }
 
 _drawCubes() {
@@ -317,4 +423,3 @@ void main() {
     _gameLoop.start();
   });
 }
-

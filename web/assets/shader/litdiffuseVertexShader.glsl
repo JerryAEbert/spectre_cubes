@@ -25,7 +25,7 @@ void main() {
     surfaceNormal = normalize(N);
     lightDir = (normalTransform*vec4(lightDirection, 0.0)).xyz;
     vec4 vPosition4 = vec4(POSITION.x, POSITION.y, POSITION.z, 1.0);
-    //mat4 M = cameraTransform*objectTransform;
-    mat4 M = cameraTransform;
+    mat4 M = cameraTransform*objectTransform;
+    //mat4 M = cameraTransform;
     gl_Position = M*vPosition4;
 }
